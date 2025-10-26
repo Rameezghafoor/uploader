@@ -1,11 +1,23 @@
 const express = require('express');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
-const ServiceAccountCredentials = require('./urge-475913-b26f71cec672.json');
 const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
 const { uploadImage } = require('./bot/upload_b2_node');
+
+// Load service account credentials from environment variable or file
+let ServiceAccountCredentials;
+if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+    ServiceAccountCredentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+} else {
+    try {
+        ServiceAccountCredentials = require('./urge-475913-b26f71cec672.json');
+    } catch (error) {
+        console.error('Error loading credentials:', error);
+        throw new Error('Google Service Account credentials not found. Please add GOOGLE_SERVICE_ACCOUNT_JSON environment variable.');
+    }
+}
 
 // Configure multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
