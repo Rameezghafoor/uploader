@@ -1,0 +1,19 @@
+node_modules/
+*.log
+.DS_Store
+.env
+package-lock.json
+__pycache__/
+*.pyc
+.vercel/
+bot/__pycache__/
+
+# Service account credentials
+*.json
+!package.json
+!vercel.json
+!package-lock.json
+
+
+
+

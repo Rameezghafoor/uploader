@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        input[type="file"] {
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+        
+        input[type="file"]::file-selector-button {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        
+        input[type="file"]::file-selector-button:hover {
+            opacity: 0.9;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Add New Entry</h1>
+        <form id="sheetForm">
+            <div class="form-group">
+                <label for="images">Upload Images (1 or more)</label>
+                <input type="file" id="images" name="images" accept="image/*" multiple required>
+                <small style="color: #666; display: block; margin-top: 5px;">Select 1+ images (automatically creates album if 2+ images)</small>
+            </div>
+            <div class="form-group">
+                <label for="caption">Title</label>
+                <textarea id="caption" name="caption" required placeholder="Enter title"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description" placeholder="Enter description (optional)"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="category">Category</label>
+                <select id="category" name="category" required>
+                    <option value="">Select category</option>
+                    <option value="chamet">Chamet</option>
+                    <option value="tango">Tango</option>
+                    <option value="viral">Viral</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <button type="submit" class="submit-btn" id="submitBtn">Upload & Add to Sheet</button>
+        </form>
+        <div id="message" class="message"></div>
+    </div>
+
+    <script>
+        document.getElementById('sheetForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const messageDiv = document.getElementById('message');
+            const form = document.getElementById('sheetForm');
+            
+            // Get form values
+            const imagesInput = document.getElementById('images');
+            const images = imagesInput.files;
+            const caption = document.getElementById('caption').value;
+            const description = document.getElementById('description').value;
+            const category = document.getElementById('category').value;
+            
+            if (images.length === 0) {
+                messageDiv.textContent = '❌ Please select at least one image';
+                messageDiv.className = 'message error show';
+                return;
+            }
+            
+            try {
+                // Disable submit button
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Uploading...';
+                
+                // Upload images first
+                const formData = new FormData();
+                for (let i = 0; i < images.length; i++) {
+                    formData.append('images', images[i]);
+                }
+                
+                const uploadResponse = await fetch('/api/upload-image', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const uploadResult = await uploadResponse.json();
+                
+                if (!uploadResult.success) {
+                    throw new Error('Image upload failed: ' + uploadResult.message);
+                }
+                
+                submitBtn.textContent = 'Adding to sheet...';
+                
+                // Send data to server with image URLs
+                const response = await fetch('/api/add-entry', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        imageUrls: uploadResult.urls,
+                        caption: caption,
+                        description: description,
+                        category: category
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const albumText = result.isAlbum ? ' (Album with ' + uploadResult.urls.length + ' images)' : '';
+                    messageDiv.textContent = '✅ ' + result.message + albumText;
+                    messageDiv.className = 'message success show';
+                    form.reset();
+                    setTimeout(() => {
+                        messageDiv.className = 'message';
+                    }, 3000);
+                } else {
+                    throw new Error(result.message || 'Failed to add entry');
+                }
+            } catch (error) {
+                messageDiv.textContent = '❌ Error: ' + error.message;
+                messageDiv.className = 'message error show';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Upload & Add to Sheet';
+            }
+        });
+    </script>
+</body>
+</html>
